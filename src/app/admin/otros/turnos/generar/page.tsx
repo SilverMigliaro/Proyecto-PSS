@@ -19,6 +19,8 @@ export default function GenerarTurnoPage() {
     const [openExito, setOpenExito] = useState(false);
     const [openError, setOpenError] = useState(false);
     const [mensajeError, setMensajeError] = useState("");
+    const [modalTipo, setModalTipo] = useState<"error" | "advertencia">("error");
+
 
     const validar = () => {
         const nuevos: Record<string, string> = {};
@@ -46,7 +48,13 @@ export default function GenerarTurnoPage() {
             const data = await res.json();
 
             if (res.ok) {
-                setOpenExito(true);
+                if (data.repetido) {
+                    setMensajeError(data.message);
+                    setModalTipo("advertencia");
+                    setOpenError(true);
+                } else {
+                    setOpenExito(true);
+                }
             } else {
                 setMensajeError(data.error || "Ocurrió un error al generar los turnos");
                 setOpenError(true);
@@ -119,6 +127,7 @@ export default function GenerarTurnoPage() {
                 open={openError}
                 onClose={() => setOpenError(false)}
                 mensaje={mensajeError}
+                tipo={modalTipo}
             />
 
         </Box>

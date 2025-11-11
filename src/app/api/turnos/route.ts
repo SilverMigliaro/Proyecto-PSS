@@ -120,9 +120,9 @@ export async function POST(req: Request) {
                     const inicioMin = horaToMinutos(hDia.horaInicio);
                     const finMin = horaToMinutos(hDia.horaFin);
 
-                    for (let min = inicioMin; min < finMin; min += 60) {
+                    for (let min = inicioMin; min < finMin; min += 30) {
                         const horaInicioStr = `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
-                        const horaFinStr = `${String(Math.floor((min + 60) / 60)).padStart(2, "0")}:${String((min + 60) % 60).padStart(2, "0")}`;
+                        const horaFinStr = `${String(Math.floor((min + 30) / 60)).padStart(2, "0")}:${String((min + 30) % 60).padStart(2, "0")}`;
 
                         const practica = cancha.practica.find((p) =>
                             p.horarios.some((hp) => {
@@ -167,9 +167,17 @@ export async function POST(req: Request) {
             skipDuplicates: true,
         });
 
+        if (result.count === 0) {
+            return NextResponse.json({
+                message: "Los turnos ya estaban generados en este período.",
+                repetido: true,
+                insertados: 0
+            });
+        }
+
         return NextResponse.json({
-            message: `Turnos generados: ${result.count} nuevos insertados`,
-            totalGenerados: turnos.length,
+            message: `Turnos generados correctamente.`,
+            repetido: false,
             insertados: result.count,
         });
 
