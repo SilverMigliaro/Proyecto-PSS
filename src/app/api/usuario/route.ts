@@ -38,13 +38,6 @@ export async function GET(req: NextRequest) {
             },
         });
 
-        if (!usuarios || usuarios.length === 0) {
-            return NextResponse.json(
-                { error: "Usuario no encontrado" },
-                { status: 404 }
-            );
-        }
-
         return NextResponse.json(usuarios, { status: 200 });
     } catch (error) {
         console.error("Error al obtener usuarios:", error);

@@ -52,7 +52,9 @@ export default function ListaUsuarios({ tipo, reload }: Props) {
         }
 
         const data = await res.json();
-        setUsuarios(data);
+        const usuariosArray = Array.isArray(data) ? data : [];
+
+        setUsuarios(usuariosArray);
       } catch (err) {
         console.error("Error al obtener usuarios:", err);
         setError("Error al obtener los usuarios");

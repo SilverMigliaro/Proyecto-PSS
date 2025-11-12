@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
         }
 
-        if (!Object.values(TipoDeporte).includes(tipoDeporte)) {
+        if (!Array.isArray(tipoDeporte) || tipoDeporte.length === 0 || tipoDeporte.some(d => !Object.values(TipoDeporte).includes(d))) {
             return NextResponse.json({ error: "Tipo de deporte inválido" }, { status: 400 });
         }
 
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
         const nuevaCancha = await prisma.cancha.create({
             data: {
                 nombre,
-                tipoDeporte: tipoDeporte as TipoDeporte,
+                tipoDeporte: tipoDeporte as TipoDeporte[],
                 interior: Boolean(interior),
                 capacidadMax: Number(capacidadMax),
                 precioHora: Number(precioHora),

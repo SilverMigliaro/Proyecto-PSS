@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { DiaSemana, TipoDeporte } from "@prisma/client";
 
+function haySolapamiento(h1Inicio: string, h1Fin: string, h2Inicio: string, h2Fin: string) {
+    return h1Inicio < h2Fin && h1Fin > h2Inicio;
+}
+
 export async function GET(_req: NextRequest) {
     try {
         const practicas = await prisma.practicaDeportiva.findMany({
@@ -36,6 +40,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "La cancha especificada no existe" }, { status: 400 });
         }
 
+        if (!fechaInicio || !fechaFin) {
+            return NextResponse.json({ error: "Debe ingresar las fechas de inicio y fin." }, { status: 400 });
+        }
+
         const entrenadores = await prisma.entrenador.findMany({
             where: { id: { in: entrenadorIds || [] } },
         });
@@ -50,6 +58,31 @@ export async function POST(req: NextRequest) {
                 }
                 if (!h.horaInicio || !h.horaFin) {
                     return NextResponse.json({ error: "Cada horario debe tener horaInicio y horaFin" }, { status: 400 });
+                }
+            }
+        }
+
+        if (Array.isArray(entrenadorIds) && entrenadorIds.length > 0) {
+            for (const entrenadorId of entrenadorIds) {
+                const practicasExistentes = await prisma.practicaDeportiva.findMany({
+                    where: {
+                        entrenadores: { some: { id: entrenadorId } }
+                    },
+                    include: { horarios: true }
+                });
+
+                for (const practica of practicasExistentes) {
+                    for (const hExist of practica.horarios) {
+                        for (const hNuevo of horarios) {
+                            if (hExist.dia === hNuevo.dia) {
+                                if (haySolapamiento(hNuevo.horaInicio, hNuevo.horaFin, hExist.horaInicio, hExist.horaFin)) {
+                                    return NextResponse.json({
+                                        error: `El entrenador ${entrenadorId} ya tiene una práctica el día ${hExist.dia} entre ${hExist.horaInicio} y ${hExist.horaFin}.`
+                                    }, { status: 400 });
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
