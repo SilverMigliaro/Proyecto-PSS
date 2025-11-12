@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/app/lib/prisma";
-import { TipoDeporte } from "@prisma/client";
+import { EstadoTurno, TipoDeporte } from "@prisma/client";
+import { addDays, format } from "date-fns";
 
 function haySolapamiento(h1Inicio: string, h1Fin: string, h2Inicio: string, h2Fin: string) {
     return h1Inicio < h2Fin && h1Fin > h2Inicio;
+}
+
+function generarFechas(fechaInicio: Date, fechaFin: Date): Date[] {
+    const fechas: Date[] = [];
+    let actual = new Date(fechaInicio);
+    while (actual <= fechaFin) {
+        fechas.push(new Date(actual));
+        actual = addDays(actual, 1);
+    }
+    return fechas;
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -54,7 +65,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                 const practicasExistentes = await prisma.practicaDeportiva.findMany({
                     where: {
                         entrenadores: { some: { id: entrenadorId } },
-                        id: { not: Number(id) } // evitar compararse con sí mismo
+                        id: { not: Number(id) }
                     },
                     include: { horarios: true }
                 });
@@ -96,11 +107,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         return NextResponse.json({ error: "Error al actualizar la práctica deportiva" }, { status: 500 });
     }
 }
-
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    if (!id)
-        return NextResponse.json({ error: "Falta el ID de la práctica deportiva" }, { status: 400 });
+    if (!id) {
+        return NextResponse.json({ error: "Falta el ID" }, { status: 400 });
+    }
 
     const practicaId = Number(id);
 
@@ -113,102 +124,120 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
                 fechaInicio: true,
                 fechaFin: true,
                 horarios: {
-                    select: {
-                        dia: true,
-                        horaInicio: true,
-                        horaFin: true,
-                    },
+                    select: { dia: true, horaInicio: true, horaFin: true },
                 },
             },
         });
 
-        if (!practica)
+        if (!practica) {
             return NextResponse.json({ error: "Práctica no encontrada" }, { status: 404 });
+        }
 
-        await prisma.$transaction(async (tx) => {
-            // A. Liberar todos los turnos que eran de esta práctica
-            if (practica.horarios.length > 0) {
-                const diasSemanaMap: Record<string, number> = {
-                    DOMINGO: 0,
-                    LUNES: 1,
-                    MARTES: 2,
-                    MIERCOLES: 3,
-                    JUEVES: 4,
-                    VIERNES: 5,
-                    SABADO: 6,
-                };
+        const fechaInicio = new Date(practica.fechaInicio);
+        const fechaFin = new Date(practica.fechaFin);
 
-                // Generar todas las fechas entre inicio y fin
-                const fechasPractica: Date[] = [];
-                let currentDate = new Date(practica.fechaInicio);
-                const endDate = new Date(practica.fechaFin);
+        const diasMap: Record<string, number> = {
+            DOMINGO: 0, LUNES: 1, MARTES: 2, MIERCOLES: 3,
+            JUEVES: 4, VIERNES: 5, SABADO: 6,
+        };
 
-                while (currentDate <= endDate) {
-                    fechasPractica.push(new Date(currentDate));
-                    currentDate.setDate(currentDate.getDate() + 1);
-                }
+        const diasPractica = practica.horarios.map(h => h.dia);
+        const diasNumeros = practica.horarios.map(h => diasMap[h.dia]);
 
-                // Filtrar días que coincidan con los días de la práctica
-                const diasPractica = practica.horarios.map(h => diasSemanaMap[h.dia]);
-                const fechasValidas = fechasPractica.filter(f => diasPractica.includes(f.getDay()));
+        console.log(`\nELIMINAR PRÁCTICA ${practicaId}`);
+        console.log(`Cancha: ${practica.canchaId}`);
+        console.log(`Rango: ${format(fechaInicio, 'yyyy-MM-dd')} → ${format(fechaFin, 'yyyy-MM-dd')}`);
+        console.log(`Días: ${diasPractica.join(', ')} → números: [${diasNumeros.join(', ')}]`);
 
-                // Actualizar turnos que coincidan con cancha + fecha + hora + estado
-                for (const horario of practica.horarios) {
-                    for (const fecha of fechasValidas) {
-                        const diaSemana = fecha.getDay();
-                        if (diasSemanaMap[horario.dia] !== diaSemana) continue;
+        // Generar todas las fechas
+        const todasLasFechas = generarFechas(fechaInicio, fechaFin);
+        const fechasCandidatas = todasLasFechas.filter(f => diasNumeros.includes(f.getDay()));
 
-                        const desde = new Date(fecha);
-                        desde.setHours(0, 0, 0, 0);
-                        const hasta = new Date(desde);
-                        hasta.setDate(hasta.getDate() + 1);
-
-                        await tx.turnoCancha.updateMany({
-                            where: {
-                                canchaId: practica.canchaId,
-                                fecha: {
-                                    gte: desde,
-                                    lt: hasta,
-                                },
-                                horaInicio: horario.horaInicio,
-                                horaFin: horario.horaFin,
-                                estado: "PRACTICA_DEPORTIVA",
-                            },
-                            data: {
-                                estado: "LIBRE",
-                                titularId: null,
-                                titularTipo: null,
-                            },
-                        });
-                    }
-                }
-            }
-
-            // B. Desvincular entrenadores
-            await tx.practicaDeportiva.update({
-                where: { id: practicaId },
-                data: { entrenadores: { set: [] } },
-            });
-
-            // C. Eliminar horarios asociados
-            await tx.horarioPractica.deleteMany({
-                where: { practicaId },
-            });
-
-            // D. Finalmente eliminar la práctica
-            await tx.practicaDeportiva.delete({
-                where: { id: practicaId },
-            });
+        console.log(`\nFechas candidatas (según horarios): ${fechasCandidatas.length}`);
+        fechasCandidatas.forEach(f => {
+            const diaStr = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'][f.getDay()];
+            console.log(`  ${format(f, 'yyyy-MM-dd')} (${diaStr})`);
         });
 
+        let totalLiberados = 0;
+
+        for (const fecha of fechasCandidatas) {
+            const fechaStr = format(fecha, 'yyyy-MM-dd');
+            const inicioDia = new Date(fecha);
+            inicioDia.setHours(0, 0, 0, 0);
+            inicioDia.setHours(inicioDia.getHours());  //el menos -3 es por buenos aires 
+
+            const finDia = new Date(fecha);
+            finDia.setHours(23, 59, 59, 999);
+            finDia.setHours(finDia.getHours()); //-3
+
+            // Verificar si HAY turnos ese día
+            const turnosDelDia = await prisma.turnoCancha.findMany({
+                where: {
+                    canchaId: practica.canchaId,
+                    fecha: { gte: inicioDia, lte: finDia },
+                    estado: EstadoTurno.PRACTICA_DEPORTIVA,
+                },
+                select: { id: true, horaInicio: true, horaFin: true, fecha: true },
+            });
+
+            if (turnosDelDia.length === 0) {
+                console.log(`  ${fechaStr} → NO hay turnos PRACTICA_DEPORTIVA`);
+                continue;
+            }
+
+            console.log(`  ${fechaStr} → ${turnosDelDia.length} turno(s) encontrado(s):`);
+            turnosDelDia.forEach(t => {
+                const horaBD = new Date(t.fecha);
+                console.log(`     ID ${t.id} | ${t.horaInicio}-${t.horaFin} | BD: ${horaBD.toISOString()}`);
+            });
+
+            // Liberar
+            const { count } = await prisma.turnoCancha.updateMany({
+                where: {
+                    canchaId: practica.canchaId,
+                    fecha: { gte: inicioDia, lte: finDia },
+                    estado: EstadoTurno.PRACTICA_DEPORTIVA,
+                },
+                data: {
+                    estado: EstadoTurno.LIBRE,
+                    titularId: null,
+                    titularTipo: null,
+                },
+            });
+
+            totalLiberados += count;
+            console.log(`  LIBERADOS: ${count} turno(s)\n`);
+        }
+
+        console.log(`TOTAL TURNOS LIBERADOS: ${totalLiberados}\n`);
+
+        // Resto: entrenadores, horarios, práctica
+        await prisma.practicaDeportiva.update({
+            where: { id: practicaId },
+            data: { entrenadores: { set: [] } },
+        });
+
+        const { count: hCount } = await prisma.horarioPractica.deleteMany({
+            where: { practicaId },
+        });
+
+        await prisma.practicaDeportiva.delete({ where: { id: practicaId } });
+
+        console.log(`PRÁCTICA ${practicaId} ELIMINADA CORRECTAMENTE`);
+        console.log(`→ Turnos liberados: ${totalLiberados}`);
+        console.log(`→ Horarios eliminados: ${hCount}\n`);
+
+        return NextResponse.json({
+            message: "Práctica eliminada",
+            liberados: totalLiberados,
+            fechasProcesadas: fechasCandidatas.map(f => format(f, 'yyyy-MM-dd')),
+        });
+
+    } catch (error: any) {
+        console.error(`ERROR ELIMINANDO PRÁCTICA ${id}:`, error);
         return NextResponse.json(
-            { message: "Práctica deportiva eliminada correctamente" },
-            { status: 200 }
-        );
-    } catch (error) {
-        console.error(error);
-        return NextResponse.json(
-            { error: "Error al eliminar la práctica deportiva" },
+            { error: "Error interno", details: error.message },
             { status: 500 }
         );
     }
