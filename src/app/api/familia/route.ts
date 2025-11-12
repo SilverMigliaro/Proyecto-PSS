@@ -1,20 +1,19 @@
 import prisma from "@/app/lib/prisma";
-import { Socio } from "@prisma/client";
 import { NextResponse, NextRequest } from "next/server";
 
 export async function GET() {
-    // try {
-    //     const familias = await prisma.familia.findMany({
-    //         include: { socios: true },
-    //     });
-    //     return NextResponse.json(familias);
-    // } catch (error) {
-    //     console.error("Error al obtener familias:", error);
-    //     return NextResponse.json(
-    //         { error: "Error al obtener las familias" },
-    //         { status: 500 }
-    //     );
-    // }
+  try {
+    const familias = await prisma.familia.findMany({
+      include: { miembros: { include: { usuario: true } } },
+    });
+    return NextResponse.json(familias);
+  } catch (error) {
+    console.error("Error al obtener familias:", error);
+    return NextResponse.json(
+      { error: "Error al obtener las familias" },
+      { status: 500 }
+    );
+  }
 }
 
 // export async function POST(req: NextRequest) {
@@ -98,7 +97,7 @@ export async function POST(req: Request) {
       },
     });
 
-        // ✅ Actualizar tipoPlan de todos los miembros + titular
+    // ✅ Actualizar tipoPlan de todos los miembros + titular
     const dnisActualizar = [titularDni, ...(miembrosDni ?? [])];
 
     await prisma.socio.updateMany({
