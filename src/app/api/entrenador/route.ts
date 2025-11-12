@@ -19,16 +19,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
     try {
         const data = await req.json();
-        const { nombre, apellido, dni, email, telefono, password, actividad } = data;
+        const { nombre, apellido, dni, email, telefono, password } = data;
 
-        if (!nombre || !apellido || !dni || !email || !password || !actividad) {
+        if (!nombre || !apellido || !dni || !email || !password) {
             return NextResponse.json({ error: "Faltan datos obligatorios" }, { status: 400 });
-        }
-        if (!Object.values(TipoDeporte).includes(actividad)) {
-            return NextResponse.json(
-                { error: "Tipo de deporte inválido" },
-                { status: 400 }
-            );
         }
         const existente = await prisma.usuario.findFirst({
             where: { OR: [{ dni }, { email }] },
@@ -56,7 +50,6 @@ export async function POST(req: NextRequest) {
                         rol: Rol.ENTRENADOR,
                     },
                 },
-                actividadDeportiva: actividad as TipoDeporte,
             },
             include: {
                 usuario: true,

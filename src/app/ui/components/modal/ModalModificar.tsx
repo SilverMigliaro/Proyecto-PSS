@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Dialog,
     DialogTitle,
@@ -28,11 +28,37 @@ export default function ModalModificar({
     setUsuario,
     onGuardar,
     tipo,
-    practicasDisponibles = [],
-}: ModalModificarProps) {
 
+}: ModalModificarProps) {
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [practicas, setPracticas] = useState<{ id: number; deporte: string }[]>([]);
+
+    useEffect(() => {
+        const cargarPracticas = async () => {
+            if (tipo === "Entrenador" && usuario?.dni) {
+                try {
+                    const res = await fetch(`/api/entrenador/${usuario.dni}`);
+                    const data = await res.json();
+
+                    // Verificamos que data.practicas sea un array
+                    const misPracticas = Array.isArray(data.practicas) ? data.practicas : [];
+                    setPracticas(misPracticas);
+
+                    // Inicializamos practicaId si no tiene valor
+                    if (!usuario.practicaId && misPracticas.length > 0) {
+                        setUsuario({ ...usuario, practicaId: misPracticas[0].id });
+                    }
+
+                } catch (err) {
+                    console.error("Error al cargar prácticas:", err);
+                    setPracticas([]);
+                }
+            }
+        };
+
+        if (open) cargarPracticas();
+    }, [open, usuario?.dni]);
 
     const validarCampo = (campo: string, valor: string) => {
         let mensaje = "";
@@ -179,7 +205,7 @@ export default function ModalModificar({
                             </Grid>
                         </>
                     )}
-                    {tipo === "Entrenador" && (
+                    {tipo === "Entrenador" && practicas.length > 0 && (
                         <Grid>
                             <TextField
                                 select
@@ -188,14 +214,15 @@ export default function ModalModificar({
                                 value={usuario?.practicaId || ""}
                                 onChange={(e) => setUsuario({ ...usuario, practicaId: Number(e.target.value) })}
                             >
-                                {practicasDisponibles.map((p) => (
+                                {practicas.map((p) => (
                                     <MenuItem key={p.id} value={p.id}>
-                                        {p.deporte}
+                                        PD{p.id} - {p.deporte}
                                     </MenuItem>
                                 ))}
                             </TextField>
                         </Grid>
                     )}
+
                 </Grid>
             </DialogContent>
             <DialogActions>

@@ -2,7 +2,10 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/app/ui/components/Toast";
+import ModalMensaje from "@/app/ui/components/modal/ModalCanchaEliminar"
 import { useRouter } from "next/navigation";
+
+type TipoDeporte = "FUTBOL" | "BASQUET" | "NATACION" | "HANDBALL";
 
 type Horario = {
     id: number;
@@ -14,7 +17,7 @@ type Horario = {
 type CanchaAPI = {
     id: number;
     nombre: string;
-    tipoDeporte: string;
+    tipoDeporte: TipoDeporte[];
     interior: boolean;
     capacidadMax: number;
     precioHora: number;
@@ -46,6 +49,10 @@ export default function BajaCanchaPage() {
     const [canchas, setCanchas] = useState<CanchaAPI[]>([]);
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalMensaje, setModalMensaje] = useState("");
+    const [modalTipo, setModalTipo] = useState<"error" | "exito" | "info">("info");
+
     const { show, ToastPortal } = useToast();
 
     // Carga las canchas con sus horarios asociados
@@ -76,22 +83,35 @@ export default function BajaCanchaPage() {
     );
 
     async function handleDelete() {
-        if (selectedId == null) return show("Seleccioná una cancha para eliminar", "info");
-
+        if (selectedId == null) {
+            setModalMensaje("Seleccioná una cancha para eliminar");
+            setModalTipo("info");
+            setModalOpen(true);
+            return;
+        }
         const nombre = canchaSel?.nombre ?? "la cancha";
-        if (!confirm(`¿Eliminar ${nombre}?`)) return;
 
         setDeleting(true);
+
         try {
             const res = await fetch(`/api/cancha/${selectedId}`, { method: "DELETE", cache: "no-store" });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
+                if (err.code === "PRACTICAS_ASIGNADAS") {
+                    setModalMensaje("No se puede eliminar una cancha con prácticas deportivas asignadas. Reasigne las prácticas antes de eliminarla.");
+                    setModalTipo("info");
+                    setModalOpen(true);
+                    return;
+                }
+
                 throw new Error(err?.error || "No se pudo eliminar la cancha");
             }
 
             await loadCanchas();
             setSelectedId(null);
-            show("Cancha eliminada exitosamente", "success");
+            setModalMensaje("Cancha eliminada exitosamente");
+            setModalTipo("exito");
+            setModalOpen(true);
             router.push("/admin/otros")
         } catch (e) {
             console.error(e);
@@ -122,7 +142,7 @@ export default function BajaCanchaPage() {
                             <option value="">— Elegir —</option>
                             {canchas.map((c) => (
                                 <option key={c.id} value={c.id}>
-                                    #{c.id} · {c.nombre} · {deporteApiToUi[c.tipoDeporte] ?? c.tipoDeporte} ·{" "}
+                                    #{c.id} · {c.nombre} ·  {c.tipoDeporte.map(d => deporteApiToUi[d]).join(", ")} ·{" "}
                                     {c.interior ? "INTERIOR" : "EXTERIOR"}
                                 </option>
                             ))}
@@ -134,8 +154,10 @@ export default function BajaCanchaPage() {
                         <div className="mt-4 text-sm text-gray-700 border rounded-lg p-3 bg-gray-50">
                             <div><span className="font-semibold">ID:</span> {canchaSel.id}</div>
                             <div><span className="font-semibold">Nombre:</span> {canchaSel.nombre}</div>
-                            <div><span className="font-semibold">Deporte:</span> {deporteApiToUi[canchaSel.tipoDeporte]}</div>
-                            <div><span className="font-semibold">Ubicación:</span> {renderUbicacion(canchaSel)}</div>
+                            <div>
+                                <span className="font-semibold">Deporte:</span>{" "}
+                                {canchaSel.tipoDeporte.map(d => deporteApiToUi[d] || d).join(", ")}
+                            </div>                            <div><span className="font-semibold">Ubicación:</span> {renderUbicacion(canchaSel)}</div>
                             <div><span className="font-semibold">Capacidad:</span> {canchaSel.capacidadMax}</div>
                             <div><span className="font-semibold">Precio:</span> ${canchaSel.precioHora}</div>
                             {canchaSel.horarios && canchaSel.horarios.length > 0 && (
@@ -196,7 +218,7 @@ export default function BajaCanchaPage() {
                                     <span className="font-semibold text-gray-900">ID: {c.id}</span>
                                     <span className="font-semibold">{c.nombre}</span>
                                     <span className=" font-bold px-2 py-0.5 text-md ">
-                                        {deporteApiToUi[c.tipoDeporte] ?? c.tipoDeporte}
+                                        {c.tipoDeporte.map(d => deporteApiToUi[d]).join(", ")}
                                     </span>
                                     <span className="font-bold px-2 py-0.5 text-md">
                                         {renderUbicacion(c)}
@@ -222,7 +244,12 @@ export default function BajaCanchaPage() {
                     </div>
                 )}
             </div>
-
+            <ModalMensaje
+                open={modalOpen}
+                onClose={() => setModalOpen(false)}
+                mensaje={modalMensaje}
+                tipo={modalTipo}
+            />
             <ToastPortal />
         </div>
     );

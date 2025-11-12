@@ -46,7 +46,17 @@ export default function ModalModificarPractica({ open, onClose, id }: ModalModif
     const [errors, setErrors] = useState<FormErrors>({});
     const [loading, setLoading] = useState(false);
     const [openExito, setOpenExito] = useState(false);
-    const [canchas, setCanchas] = useState<{ id: number; nombre: string }[]>([]);
+    const [canchas, setCanchas] = useState<{
+        id: number;
+        nombre: string;
+        tipoDeporte: string[];
+        interior?: boolean;
+        horarios?: { diaSemana: string; horaInicio: string; horaFin: string }[];
+    }[]>([]); const [entrenadores, setEntrenadores] = useState<{
+        id: number;
+        usuario: { dni: string; nombre: string; apellido: string };
+    }[]>([]);
+    const [entrenadorId, setEntrenadorId] = useState<number | "">("");
 
     useEffect(() => {
         if (!open || !id) return;
@@ -60,6 +70,16 @@ export default function ModalModificarPractica({ open, onClose, id }: ModalModif
                 const resCanchas = await fetch("/api/cancha");
                 const listaCanchas = await resCanchas.json();
 
+                const resEntrenadores = await fetch("/api/entrenador");
+                const listaEntrenadores = await resEntrenadores.json();
+                setEntrenadores(listaEntrenadores);
+                const entrenadorAsignado =
+                    practica.entrenadores && practica.entrenadores.length > 0
+                        ? practica.entrenadores[0].id
+                        : "";
+
+                setEntrenadorId(entrenadorAsignado);
+
                 setFormData({
                     deporte: practica.deporte || "",
                     canchaId: practica.canchaId || "",
@@ -71,6 +91,8 @@ export default function ModalModificarPractica({ open, onClose, id }: ModalModif
                         : "",
                     precio: practica.precio || "",
                 });
+
+
 
                 setCanchas(listaCanchas);
             } catch (error) {
@@ -88,15 +110,23 @@ export default function ModalModificarPractica({ open, onClose, id }: ModalModif
             case "deporte":
                 if (!value.trim()) return "El deporte es obligatorio.";
                 break;
+
             case "canchaId":
                 if (!value) return "Debe seleccionar una cancha.";
                 break;
+
             case "fechaInicio":
                 if (!value) return "Debe ingresar la fecha de inicio.";
+                if (formData.fechaFin && new Date(value) > new Date(formData.fechaFin))
+                    return "La fecha de inicio no puede ser superior a la fecha de finalización.";
                 break;
+
             case "fechaFin":
                 if (!value) return "Debe ingresar la fecha de finalización.";
+                if (formData.fechaInicio && new Date(value) < new Date(formData.fechaInicio))
+                    return "La fecha de finalización no puede ser anterior a la fecha de inicio.";
                 break;
+
             case "precio":
                 if (value === "" || value === null) return "Debe ingresar un precio.";
                 if (Number(value) <= 0) return "El precio debe ser mayor que cero.";
@@ -139,11 +169,16 @@ export default function ModalModificarPractica({ open, onClose, id }: ModalModif
     const handleSubmit = async () => {
         if (!validateForm()) return;
 
+        const payload = {
+            ...formData,
+            entrenadorIds: entrenadorId ? [entrenadorId] : [],
+        };
+
         try {
             const res = await fetch(`/api/practicaDeportiva/${id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData),
+                body: JSON.stringify(payload),
             });
 
             if (!res.ok) throw new Error("Error al actualizar la práctica");
@@ -166,6 +201,7 @@ export default function ModalModificarPractica({ open, onClose, id }: ModalModif
         );
     }
 
+    const canchaSeleccionada = canchas.find(c => c.id === formData.canchaId) ?? null;
     return (
         <>
             <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -183,6 +219,23 @@ export default function ModalModificarPractica({ open, onClose, id }: ModalModif
                         margin="normal"
                         variant="outlined"
                     />
+                    <TextField
+                        select
+                        label="Entrenador (opcional)"
+                        name="entrenadorId"
+                        value={entrenadorId}
+                        onChange={(e) => setEntrenadorId(e.target.value ? Number(e.target.value) : "")}
+                        fullWidth
+                        margin="normal"
+                        variant="outlined"
+                    >
+                        <MenuItem value="">Sin entrenador</MenuItem>
+                        {entrenadores.map((e) => (
+                            <MenuItem key={e.id} value={e.id}>
+                                DNI {e.usuario.dni} - {e.usuario.nombre} {e.usuario.apellido}
+                            </MenuItem>
+                        ))}
+                    </TextField>
 
                     <TextField
                         select
@@ -204,7 +257,6 @@ export default function ModalModificarPractica({ open, onClose, id }: ModalModif
                             </MenuItem>
                         ))}
                     </TextField>
-
                     <TextField
                         label="Fecha de inicio"
                         name="fechaInicio"
@@ -263,7 +315,6 @@ export default function ModalModificarPractica({ open, onClose, id }: ModalModif
                     </Button>
                 </DialogActions>
             </Dialog>
-
             <ModalExitoPractica open={openExito} onClose={() => setOpenExito(false)} opcion="modificada" />
         </>
     );

@@ -28,7 +28,7 @@ export default function ModalCrear<T extends UsuarioBase>({ open, onClose, tipo,
 
     const validar = (campo?: keyof T): boolean => {
         const newErrors: Record<string, string> = {};
-        const campos = campo ? [campo] : ["nombre", "apellido", "dni", "email", "password", "tipoPlan", "actividad"] as (keyof T)[];
+        const campos = campo ? [campo] : ["nombre", "apellido", "dni", "email", "password", "tipoPlan"] as (keyof T)[];
 
         campos.forEach(key => {
             const value = (form as any)[key];
@@ -63,10 +63,6 @@ export default function ModalCrear<T extends UsuarioBase>({ open, onClose, tipo,
             if (tipo === "Socio" && key === "tipoPlan" && !(form as Partial<Socio>).tipoPlan) {
                 newErrors.tipoPlan = "Seleccione un tipo de plan";
             }
-
-            if (tipo === "Entrenador" && key === "actividad" && !(form as Partial<Entrenador>).actividadDeportiva) {
-                newErrors.actividad = "Seleccione una actividad";
-            }
         });
 
         setErrors(prev => ({ ...prev, ...newErrors }));
@@ -88,10 +84,6 @@ export default function ModalCrear<T extends UsuarioBase>({ open, onClose, tipo,
                 url = "/api/socio";
             } else if (tipo === "Entrenador") {
                 url = "/api/entrenador";
-                body = {
-                    ...form,
-                    actividad: (form as Partial<Entrenador>).actividadDeportiva
-                };
             } else {
                 throw new Error("Tipo de usuario no válido");
             }
@@ -199,25 +191,6 @@ export default function ModalCrear<T extends UsuarioBase>({ open, onClose, tipo,
                             >
                                 <MenuItem value="INDIVIDUAL">INDIVIDUAL</MenuItem>
                                 <MenuItem value="FAMILIAR">FAMILIAR</MenuItem>
-                            </TextField>
-                        </Grid>
-                    )}
-
-                    {tipo === "Entrenador" && (
-                        <Grid>
-                            <TextField
-                                select
-                                fullWidth
-                                label="Actividad Deportiva"
-                                value={(form as Partial<Entrenador>).actividadDeportiva || ""}
-                                onChange={e => handleChange("actividadDeportiva" as keyof T, e.target.value)}
-                                error={!!errors.actividad}
-                                helperText={errors.actividad}
-                            >
-                                <MenuItem value="FUTBOL">FÚTBOL</MenuItem>
-                                <MenuItem value="BASQUET">BÁSQUET</MenuItem>
-                                <MenuItem value="NATACION">NATACIÓN</MenuItem>
-                                <MenuItem value="HANDBALL">HANDBALL</MenuItem>
                             </TextField>
                         </Grid>
                     )}

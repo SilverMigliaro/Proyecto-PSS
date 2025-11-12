@@ -16,6 +16,7 @@ import {
     FormHelperText,
 } from "@mui/material";
 
+type TipoDeporte = "FUTBOL" | "BASQUET" | "NATACION" | "HANDBALL";
 const days = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"];
 const hours = [
     "08:00", "09:00", "10:00", "11:00", "12:00", "13:00",
@@ -34,7 +35,7 @@ type Horario = {
 type CanchaListado = {
     id: number | string;
     nombre: string;
-    tipoDeporte: string;
+    tipoDeporte: TipoDeporte[];
     interior?: boolean;
     ubicacion?: Ubicacion;
     capacidadMax?: number;

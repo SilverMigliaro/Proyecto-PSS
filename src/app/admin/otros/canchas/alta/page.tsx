@@ -19,7 +19,7 @@ type Horario = {
 type CanchaListado = {
     id: number | string;
     nombre: string;
-    tipoDeporte: string;
+    tipoDeporte: TipoDeporte[];
     interior?: boolean;
     ubicacion?: Ubicacion;
     capacidadMax?: number;
@@ -47,7 +47,7 @@ const diaApiToUi: Record<string, string> = {
 
 type FormInput = {
     nombre: string;
-    tipoDeporte: TipoDeporte;
+    tipoDeporte: TipoDeporte[];
     ubicacion: Ubicacion;
     capacidadMaxima: number;
     precioPorHora: string;
@@ -69,11 +69,21 @@ export default function AltaCanchaPage() {
 
     const [form, setForm] = useState<FormInput>({
         nombre: "",
-        tipoDeporte: "FUTBOL",
+        tipoDeporte: [],
         ubicacion: "EXTERIOR",
         capacidadMaxima: 10,
         precioPorHora: "",
     });
+
+    const toggleDeporte = (deporte: TipoDeporte) => {
+        setForm(prev => {
+            const existe = prev.tipoDeporte.includes(deporte);
+            const nuevos = existe
+                ? prev.tipoDeporte.filter(d => d !== deporte)
+                : [...prev.tipoDeporte, deporte];
+            return { ...prev, tipoDeporte: nuevos };
+        });
+    };
 
     // Función para cargar canchas
     async function loadCanchas() {
@@ -99,7 +109,7 @@ export default function AltaCanchaPage() {
     const resetForm = () => {
         setForm({
             nombre: "",
-            tipoDeporte: "FUTBOL",
+            tipoDeporte: [],
             ubicacion: "EXTERIOR",
             capacidadMaxima: 10,
             precioPorHora: "",
@@ -149,10 +159,14 @@ export default function AltaCanchaPage() {
                         h.horaInicio &&
                         h.horaFin
                 );
+            if (form.tipoDeporte.length === 0) {
+                show("Seleccioná al menos un tipo de deporte", "error");
+                return;
+            }
 
             const payload = {
                 nombre: nombreTrim,
-                tipoDeporte: form.tipoDeporte,
+                tipoDeporte: form.tipoDeporte as TipoDeporte[],
                 interior: form.ubicacion === "INTERIOR",
                 capacidadMax: form.capacidadMaxima,
                 precioHora: precioNumber,
@@ -216,22 +230,24 @@ export default function AltaCanchaPage() {
                     </label>
 
                     {/* Tipo de deporte */}
-                    <label className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-2 md:col-span-2">
                         <span className="text-sm font-medium text-gray-700">
                             Tipo de deporte <span className="text-red-600">*</span>
                         </span>
-                        <select
-                            required
-                            value={form.tipoDeporte}
-                            onChange={(e) => onChange("tipoDeporte", e.target.value as TipoDeporte)}
-                            className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500"
-                        >
-                            <option value="FUTBOL">FÚTBOL</option>
-                            <option value="BASQUET">BÁSQUET</option>
-                            <option value="NATACION">NATACIÓN</option>
-                            <option value="HANDBALL">HANDBALL</option>
-                        </select>
-                    </label>
+                        <div className="mt-2 flex flex-wrap gap-4">
+                            {(["FUTBOL", "BASQUET", "NATACION", "HANDBALL"] as TipoDeporte[]).map((d) => (
+                                <label key={d} className="inline-flex items-center gap-2 text-sm text-gray-700">
+                                    <input
+                                        type="checkbox"
+                                        checked={form.tipoDeporte.includes(d)}
+                                        onChange={() => toggleDeporte(d)}
+                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    {deporteApiToUi[d]}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
 
                     {/* Ubicación */}
                     <div className="md:col-span-2">
@@ -271,7 +287,7 @@ export default function AltaCanchaPage() {
                             onClick={() => setModalOpen(true)}
                             className="bg-[#222222] hover:bg-black text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors"
                         >
-                            <CalendarMonthIcon /> Agregar horarios
+                            <CalendarMonthIcon /> Agregar dias y horarios <span className="text-red-600">*</span>
                         </button>
                     </div>
 
@@ -362,7 +378,7 @@ export default function AltaCanchaPage() {
                                     <span className="font-semibold text-gray-900">ID: {c.id}</span>
                                     <span className="font-semibold">{c.nombre}</span>
                                     <span className=" font-bold px-2 py-0.5 text-md ">
-                                        {deporteApiToUi[c.tipoDeporte] ?? c.tipoDeporte}
+                                        {c.tipoDeporte.map(d => deporteApiToUi[d]).join(", ")}
                                     </span>
                                     <span className="font-bold px-2 py-0.5 text-md">
                                         {renderUbicacion(c)}

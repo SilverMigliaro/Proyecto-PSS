@@ -76,7 +76,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ dni:
                         rol: Rol.ENTRENADOR,
                     },
                 },
-                actividadDeportiva: actividad as TipoDeporte,
             },
             include: { usuario: true, practicas: true },
         });

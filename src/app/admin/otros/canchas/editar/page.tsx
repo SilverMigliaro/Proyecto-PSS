@@ -7,7 +7,7 @@ import ModalEditable from "@/app/ui/components/modal/ModificarHorarioModal";
 import EditCalendarIcon from '@mui/icons-material/EditCalendar';
 import EditDocumentIcon from '@mui/icons-material/EditDocument';
 import { useRouter } from "next/navigation";
-type TipoDeporteUI = "FUTBOL" | "BASQUET" | "NATACION" | "HANDBALL";
+type TipoDeporte = "FUTBOL" | "BASQUET" | "NATACION" | "HANDBALL";
 type Ubicacion = "INTERIOR" | "EXTERIOR";
 
 export type Horario = {
@@ -19,7 +19,7 @@ export type Horario = {
 export type CanchaListado = {
     id: number;
     nombre: string;
-    tipoDeporte: string;
+    tipoDeporte: TipoDeporte[];
     interior?: boolean;
     ubicacion?: Ubicacion;
     capacidadMax?: number;
@@ -31,7 +31,7 @@ export type CanchaListado = {
 
 type FormUI = {
     nombre: string;
-    tipoDeporte: TipoDeporteUI;
+    tipoDeporte: TipoDeporte[];
     ubicacion: Ubicacion;
     capacidadMaxima: number;
     precioPorHora: number | "";
@@ -40,7 +40,7 @@ type FormUI = {
     horaCierre: string;
 };
 
-const deporteApiToUi: Record<string, TipoDeporteUI> = {
+const deporteApiToUi: Record<string, TipoDeporte> = {
     FUTBOL: "FUTBOL",
     BASQUET: "BASQUET",
     NATACION: "NATACION",
@@ -59,9 +59,12 @@ const diaApiToUi: Record<string, string> = {
 
 function apiToUi(c: CanchaListado): FormUI {
     const primerHorario = c.horarios[0] ?? { diaSemana: "LUNES", horaInicio: "08:00", horaFin: "22:00" };
+    const tipos: TipoDeporte[] = Array.isArray(c.tipoDeporte)
+        ? c.tipoDeporte
+        : (c.tipoDeporte ? [c.tipoDeporte as TipoDeporte] : ["FUTBOL"]);
     return {
         nombre: c.nombre ?? "",
-        tipoDeporte: (deporteApiToUi[c.tipoDeporte] ?? "FUTBOL") as TipoDeporteUI,
+        tipoDeporte: c.tipoDeporte.length > 0 ? c.tipoDeporte : ["FUTBOL"],
         ubicacion: c.interior ? "INTERIOR" : "EXTERIOR",
         capacidadMaxima: typeof c.capacidadMax === "number" ? c.capacidadMax : 10,
         precioPorHora: typeof c.precioHora === "number" ? c.precioHora : 0,
@@ -82,7 +85,7 @@ export default function EditarCanchaPage() {
 
     const [form, setForm] = useState<FormUI>({
         nombre: "",
-        tipoDeporte: "FUTBOL",
+        tipoDeporte: [],
         ubicacion: "EXTERIOR",
         capacidadMaxima: 10,
         precioPorHora: 0,
@@ -96,7 +99,16 @@ export default function EditarCanchaPage() {
     async function loadCanchas() {
         const res = await fetch("/api/cancha", { cache: "no-store" });
         if (!res.ok) throw new Error("No se pudo cargar canchas");
-        const data = (await res.json()) as CanchaListado[];
+        const dataRaw = await res.json();
+
+        // Convertimos cada tipoDeporte en array si viene como string
+        const data: CanchaListado[] = dataRaw.map((c: any) => ({
+            ...c,
+            tipoDeporte: Array.isArray(c.tipoDeporte)
+                ? c.tipoDeporte
+                : (c.tipoDeporte ? [c.tipoDeporte] : ["FUTBOL"]),
+        }));
+
         const unique = Array.from(new Map(data.map(c => [c.id, c])).values());
         setCanchas(unique);
     }
@@ -117,7 +129,7 @@ export default function EditarCanchaPage() {
         setSelectedId(null);
         setForm({
             nombre: "",
-            tipoDeporte: "FUTBOL",
+            tipoDeporte: [],
             ubicacion: "EXTERIOR",
             capacidadMaxima: 10,
             precioPorHora: 0,
@@ -130,7 +142,7 @@ export default function EditarCanchaPage() {
     function validate(): string | null {
         const nombreTrim = form.nombre.trim();
         if (!nombreTrim || !NOMBRE_REGEX.test(nombreTrim)) return "Ingresá un nombre válido: solo letras (A–Z) y espacios.";
-        if (!form.tipoDeporte) return "Seleccioná el tipo de deporte.";
+        if (form.tipoDeporte.length === 0) return "Seleccioná el tipo de deporte.";
         if (!form.ubicacion) return "Seleccioná la ubicación.";
         if (!form.capacidadMaxima || form.capacidadMaxima < 1) return "La capacidad máxima debe ser mayor o igual a 1.";
         if (form.precioPorHora === "") return "Ingresá el precio por hora.";
@@ -216,7 +228,7 @@ export default function EditarCanchaPage() {
                             <option value="">— Elegir —</option>
                             {canchas.map((c) => (
                                 <option key={c.id} value={c.id}>
-                                    #{c.id} · {c.nombre} · {deporteApiToUi[c.tipoDeporte] ?? c.tipoDeporte} · {c.interior ? "INTERIOR" : "EXTERIOR"}
+                                    #{c.id} · {c.nombre} · {c.tipoDeporte.map(d => deporteApiToUi[d]).join(", ")} · {c.interior ? "INTERIOR" : "EXTERIOR"}
                                 </option>
                             ))}
                         </select>
@@ -241,19 +253,33 @@ export default function EditarCanchaPage() {
                     </label>
 
                     {/* Tipo de deporte */}
-                    <label className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 mb-5">
                         <span className="text-sm font-medium text-gray-700">
                             Tipo de deporte <span className="text-red-600">*</span>
                         </span>
-                        <select
-                            required
-                            value={form.tipoDeporte}
-                            onChange={(e) => onChange("tipoDeporte", e.target.value as TipoDeporteUI)}
-                            className="border rounded-lg px-3 py-2 text-sm"
-                        >
-                            <option>FUTBOL</option><option>BASQUET</option><option>NATACION</option><option>HANDBALL</option>
-                        </select>
-                    </label>
+                        <div className="flex gap-4 flex-wrap">
+                            {["FUTBOL", "BASQUET", "NATACION", "HANDBALL"].map((d) => (
+                                <label key={d} className="flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        value={d}
+                                        checked={form.tipoDeporte.includes(d as TipoDeporte)}
+                                        onChange={(e) => {
+                                            const value = e.target.value as TipoDeporte;
+                                            setForm(prev => ({
+                                                ...prev,
+                                                tipoDeporte: prev.tipoDeporte.includes(value)
+                                                    ? prev.tipoDeporte.filter(td => td !== value)
+                                                    : [...prev.tipoDeporte, value]
+                                            }));
+                                        }}
+                                        className="w-4 h-4"
+                                    />
+                                    {d}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
 
                     {/* Capacidad máxima */}
                     <label className="flex flex-col gap-1">
@@ -376,7 +402,7 @@ export default function EditarCanchaPage() {
                                     <span className="font-semibold text-gray-900">ID: {c.id}</span>
                                     <span className="font-semibold">{c.nombre}</span>
                                     <span className=" font-bold px-2 py-0.5 text-md ">
-                                        {deporteApiToUi[c.tipoDeporte] ?? c.tipoDeporte}
+                                        {c.tipoDeporte.map(d => deporteApiToUi[d]).join(", ")}
                                     </span>
                                     <span className="font-bold px-2 py-0.5 text-md">
                                         {renderUbicacion(c)}

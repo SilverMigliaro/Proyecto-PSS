@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { Entrenador, Cancha } from "@prisma/client";
 import ModalExitoEliminarPractica from "@/app/ui/components/modal/ModalExitoPractica";
+import ModalInfo from "@/app/ui/components/modal/ModalInfoPractica";
 
 type EntrenadorConUsuario = Entrenador & {
     usuario: {
@@ -49,6 +50,8 @@ export default function AltaPracticaDeportiva() {
     const [canchas, setCanchas] = useState<Cancha[]>([]);
     const [errores, setErrores] = useState<any>({});
     const [openModalExito, setOpenModalExito] = useState(false);
+    const [openModalInfo, setOpenModalInfo] = useState(false);
+    const [mensajeError, setMensajeError] = useState("");
 
 
     const fetchEntrenadores = async () => {
@@ -78,10 +81,6 @@ export default function AltaPracticaDeportiva() {
         fetchCanchas();
     }, []);
 
-    const entrenadoresFiltrados = entrenadores.filter(
-        (e: any) => e.actividadDeportiva === deporte
-    );
-
     const horaFinOptions = inicio
         ? hours.slice(hours.indexOf(inicio) + 1)
         : hours.slice(1);
@@ -93,7 +92,7 @@ export default function AltaPracticaDeportiva() {
     const validarCampo = (campo: string) => {
         switch (campo) {
             case "deporte": return !deporte ? "Debe seleccionar un deporte" : "";
-            case "entrenadorId": return !entrenadorId ? "Debe seleccionar un entrenador" : "";
+            case "entrenadorId": return "";
             case "canchaId": return !canchaId ? "Debe seleccionar una cancha" : "";
             case "diasSeleccionados": return !diasSeleccionados.length ? "Debe seleccionar al menos un día" : "";
             case "inicio": return !inicio ? "Debe seleccionar hora de inicio" : "";
@@ -150,9 +149,9 @@ export default function AltaPracticaDeportiva() {
             setFechaInicio(""); setFechaFin(""); setPrecio(""); setErrores({});
             setOpenModalExito(true);
 
-        } catch (err) {
-            console.error(err);
-            alert("Ocurrió un error al guardar la práctica");
+        } catch (err: any) {
+            setMensajeError(err.message);
+            setOpenModalInfo(true);
         }
     };
 
@@ -186,7 +185,7 @@ export default function AltaPracticaDeportiva() {
                     label="Entrenador"
                 >
                     <MenuItem value=""><em>Ninguno</em></MenuItem>
-                    {entrenadoresFiltrados.map((e) => (
+                    {entrenadores.map((e) => (
                         <MenuItem key={e.id} value={e.id}>
                             DNI {e.usuario.dni} - {e.usuario.nombre} {e.usuario.apellido}
                         </MenuItem>
@@ -342,6 +341,12 @@ export default function AltaPracticaDeportiva() {
                 open={openModalExito}
                 onClose={() => setOpenModalExito(false)}
                 opcion="creada"
+            />
+            <ModalInfo
+                open={openModalInfo}
+                onClose={() => setOpenModalInfo(false)}
+                mensaje={mensajeError}
+                tipo="error"
             />
         </Box>
     );
