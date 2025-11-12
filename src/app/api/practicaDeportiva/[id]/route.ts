@@ -99,8 +99,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    if (!id) return NextResponse.json({ error: "Falta el ID de la práctica deportiva" }, { status: 400 });
+    if (!id)
+        return NextResponse.json({ error: "Falta el ID de la práctica deportiva" }, { status: 400 });
+
     const practicaId = Number(id);
+
     try {
         const practica = await prisma.practicaDeportiva.findUnique({
             where: { id: practicaId },
@@ -118,20 +121,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
                 },
             },
         });
-        if (!practica) return NextResponse.json({ error: "Práctica no encontrada" }, { status: 404 });
+
+        if (!practica)
+            return NextResponse.json({ error: "Práctica no encontrada" }, { status: 404 });
 
         await prisma.$transaction(async (tx) => {
             // A. Liberar todos los turnos que eran de esta práctica
             if (practica.horarios.length > 0) {
-                const fechasPractica = [];
-                let currentDate = new Date(practica.fechaInicio);
-                const endDate = new Date(practica.fechaFin);
-
-                while (currentDate <= endDate) {
-                    fechasPractica.push(new Date(currentDate));
-                    currentDate.setDate(currentDate.getDate() + 1);
-                }
-
                 const diasSemanaMap: Record<string, number> = {
                     DOMINGO: 0,
                     LUNES: 1,
@@ -142,34 +138,49 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
                     SABADO: 6,
                 };
 
+                // Generar todas las fechas entre inicio y fin
+                const fechasPractica: Date[] = [];
+                let currentDate = new Date(practica.fechaInicio);
+                const endDate = new Date(practica.fechaFin);
+
+                while (currentDate <= endDate) {
+                    fechasPractica.push(new Date(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                // Filtrar días que coincidan con los días de la práctica
                 const diasPractica = practica.horarios.map(h => diasSemanaMap[h.dia]);
+                const fechasValidas = fechasPractica.filter(f => diasPractica.includes(f.getDay()));
 
-                const fechasConDiaValido = fechasPractica.filter(date => {
-                    const diaSemana = date.getDay();
-                    return diasPractica.includes(diaSemana);
-                });
-
-                // Liberar turnos que coinciden con día + hora + cancha + estado PRACTICA_DEPORTIVA
+                // Actualizar turnos que coincidan con cancha + fecha + hora + estado
                 for (const horario of practica.horarios) {
-                    await tx.turnoCancha.updateMany({
-                        where: {
-                            canchaId: practica.canchaId,
-                            fecha: {
-                                in: fechasConDiaValido.map(d => {
-                                    const dateStr = d.toISOString().split("T")[0];
-                                    return new Date(dateStr);
-                                }),
+                    for (const fecha of fechasValidas) {
+                        const diaSemana = fecha.getDay();
+                        if (diasSemanaMap[horario.dia] !== diaSemana) continue;
+
+                        const desde = new Date(fecha);
+                        desde.setHours(0, 0, 0, 0);
+                        const hasta = new Date(desde);
+                        hasta.setDate(hasta.getDate() + 1);
+
+                        await tx.turnoCancha.updateMany({
+                            where: {
+                                canchaId: practica.canchaId,
+                                fecha: {
+                                    gte: desde,
+                                    lt: hasta,
+                                },
+                                horaInicio: horario.horaInicio,
+                                horaFin: horario.horaFin,
+                                estado: "PRACTICA_DEPORTIVA",
                             },
-                            horaInicio: horario.horaInicio,
-                            horaFin: horario.horaFin,
-                            estado: "PRACTICA_DEPORTIVA",
-                        },
-                        data: {
-                            estado: "LIBRE",
-                            titularId: null,
-                            titularTipo: null,
-                        },
-                    });
+                            data: {
+                                estado: "LIBRE",
+                                titularId: null,
+                                titularTipo: null,
+                            },
+                        });
+                    }
                 }
             }
 
@@ -179,20 +190,26 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
                 data: { entrenadores: { set: [] } },
             });
 
-            // C. Borrar horarios
+            // C. Eliminar horarios asociados
             await tx.horarioPractica.deleteMany({
                 where: { practicaId },
             });
 
-            // D. Finalmente borrar la práctica
+            // D. Finalmente eliminar la práctica
             await tx.practicaDeportiva.delete({
                 where: { id: practicaId },
             });
         });
 
-        return NextResponse.json({ message: "Práctica deportiva eliminada correctamente" }, { status: 200 });
+        return NextResponse.json(
+            { message: "Práctica deportiva eliminada correctamente" },
+            { status: 200 }
+        );
     } catch (error) {
         console.error(error);
-        return NextResponse.json({ error: "Error al eliminar la práctica deportiva" }, { status: 500 });
+        return NextResponse.json(
+            { error: "Error al eliminar la práctica deportiva" },
+            { status: 500 }
+        );
     }
 }
