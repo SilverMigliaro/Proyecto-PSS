@@ -130,8 +130,8 @@ model AlquilerCancha {
   id                Int            @id @default(autoincrement())
   socioId           Int
   turnoId           Int
-  fechaReserva      DateTime       @default(now())
-  estadoAlquiler    EstadoAlquiler
+  fechaReserva      DateTime
+  estadoAlquiler    EstadoAlquiler @default(RESERVADO)
   motivoCancelacion Motivo?
   fechaCancelacion  DateTime?
   notificado        Boolean        @default(false)
