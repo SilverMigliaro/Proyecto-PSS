@@ -1,8 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import LogoutIcon from "@mui/icons-material/Logout";
-import { signOut } from "next-auth/react";
 import Image from "next/image";
 
 export default function SocioPage() {
@@ -48,7 +46,7 @@ export default function SocioPage() {
             alt="imagen usuario"
           ></Image>
           <Link
-            href=""
+            href="/socio/perfil"
             className="bg-gray-900 text-white p-4 rounded-xl hover:scale-105 transition duration-300"
           >
             Perfil de usuario: {session?.user?.name}
@@ -63,7 +61,7 @@ export default function SocioPage() {
 
           </Image>
           <Link
-            href="socio/pagos"
+            href=""
             className="bg-gray-900 text-white p-4 rounded-xl hover:scale-105 transition duration-300"
           >
             Pagos

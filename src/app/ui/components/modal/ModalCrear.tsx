@@ -82,14 +82,13 @@ export default function ModalCrear<T extends UsuarioBase>({
     const campos = campo
       ? [campo]
       : ([
-          "nombre",
-          "apellido",
-          "dni",
-          "email",
-          "password",
-          "tipoPlan",
-          "actividad",
-        ] as (keyof T)[]);
+        "nombre",
+        "apellido",
+        "dni",
+        "email",
+        "password",
+        "tipoPlan",
+      ] as (keyof T)[]);
 
     campos.forEach((key) => {
       const value = (form as any)[key];
@@ -136,14 +135,6 @@ export default function ModalCrear<T extends UsuarioBase>({
       ) {
         newErrors.tipoPlan = "Seleccione un tipo de plan";
       }
-
-      if (
-        tipo === "Entrenador" &&
-        key === "actividad" &&
-        !(form as Partial<Entrenador>).actividadDeportiva
-      ) {
-        newErrors.actividad = "Seleccione una actividad";
-      }
     });
 
     setErrors((prev) => ({ ...prev, ...newErrors }));
@@ -165,10 +156,6 @@ export default function ModalCrear<T extends UsuarioBase>({
         url = "/api/socio";
       } else if (tipo === "Entrenador") {
         url = "/api/entrenador";
-        body = {
-          ...form,
-          actividad: (form as Partial<Entrenador>).actividadDeportiva,
-        };
       } else {
         throw new Error("Tipo de usuario no válido");
       }
@@ -261,11 +248,10 @@ export default function ModalCrear<T extends UsuarioBase>({
                   <button
                     disabled={dniMiembro.trim() === ""}
                     onClick={agregarMiembro}
-                    className={` p-1 border rounded-xl ${
-                      dniMiembro.length === 7 || dniMiembro.length === 8
-                        ? "bg-green-500"
-                        : "bg-gray-200 border-0 text-gray-400"
-                    }`}
+                    className={` p-1 border rounded-xl ${dniMiembro.length === 7 || dniMiembro.length === 8
+                      ? "bg-green-500"
+                      : "bg-gray-200 border-0 text-gray-400"
+                      }`}
                   >
                     Agregar
                   </button>
@@ -364,31 +350,7 @@ export default function ModalCrear<T extends UsuarioBase>({
                   </TextField>
                 </Grid>
               )}
-              {tipo === "Entrenador" && (
-                <Grid>
-                  <TextField
-                    select
-                    fullWidth
-                    label="Actividad Deportiva"
-                    value={
-                      (form as Partial<Entrenador>).actividadDeportiva || ""
-                    }
-                    onChange={(e) =>
-                      handleChange(
-                        "actividadDeportiva" as keyof T,
-                        e.target.value
-                      )
-                    }
-                    error={!!errors.actividad}
-                    helperText={errors.actividad}
-                  >
-                    <MenuItem value="FUTBOL">FÚTBOL</MenuItem>
-                    <MenuItem value="BASQUET">BÁSQUET</MenuItem>
-                    <MenuItem value="NATACION">NATACIÓN</MenuItem>
-                    <MenuItem value="HANDBALL">HANDBALL</MenuItem>
-                  </TextField>
-                </Grid>
-              )}
+
             </>
           )}
         </Grid>

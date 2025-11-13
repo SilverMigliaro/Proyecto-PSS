@@ -46,12 +46,11 @@ model Socio {
 }
 
 model Familia {
-  id          Int     @id @default(autoincrement())
-  apellido    String
-  descuento   Float   @default(0.3)
-
-  titularDni  String  @unique
-  miembros     Socio[]
+  id         Int     @id @default(autoincrement())
+  apellido   String
+  descuento  Float   @default(0.3)
+  titularDni String  @unique
+  miembros   Socio[]
 }
 
 model PracticaDeportiva {

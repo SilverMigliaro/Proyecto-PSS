@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
                 data: {
                     socioId,
                     turnoId: turno.id,
+                    fechaReserva: new Date(),
                     estadoAlquiler: EstadoAlquiler.RESERVADO,
                 },
             });

@@ -130,17 +130,9 @@ export default function Page() {
 
   return (
     <div className="h-screen flex flex-col items-center">
-      <header className="h-1/8 flex-shrink-0  flex items-center justify-between px-14 bg-[#124559] w-full">
-        <h1 className="text-2xl font-bold text-white">BahiaBlanca Club</h1>
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="text-white hover:text-rose-600"
-        >
-          <LogoutIcon />
-        </button>
-      </header>
+
       <Link
-        className="self-end p-2 mt-3 mr-3 border shadow-sm bg-[#01161E] text-white border-black font-bold shadow-black rounded-2xl"
+        className="self-end p-6 mt-3 mr-3 border shadow-sm bg-[#01161E] text-white border-black font-bold shadow-black rounded-2xl"
         href={"/socio"}
       >
         {" "}
@@ -166,7 +158,7 @@ export default function Page() {
               Mis practicas
             </button>
             <button
-              className={`border shadow-sm bg-[#01161E] text-white border-black font-bold shadow-black p-2 rounded-2xl hover:scale-105 transition duration-300`}
+              className={`border shadow-sm bg-[#01161E] text-white border-black font-bold shadow-black p-6 rounded-2xl hover:scale-105 transition duration-300`}
               onClick={() => setModo("INSCRIBIRME")}
             >
               Inscribirme a practicas deportivas
@@ -194,30 +186,30 @@ export default function Page() {
                   <p className="font-bold">Fecha Inicio:</p>
                   {practica.practica?.fechaInicio
                     ? new Date(practica.practica.fechaFin).toLocaleString(
-                        "es-AR",
-                        {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )
+                      "es-AR",
+                      {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )
                     : "Sin fecha"}
                 </div>
                 <div className="flex gap-2">
                   <p className="font-bold">Fecha Fin:</p>
                   {practica.practica?.fechaFin
                     ? new Date(practica.practica.fechaFin).toLocaleString(
-                        "es-AR",
-                        {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )
+                      "es-AR",
+                      {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )
                     : "Sin fecha"}
                 </div>
                 <div>
@@ -329,24 +321,24 @@ export default function Page() {
                   <p className="font-bold">Fecha Inicio:</p>
                   {practica.fechaInicio
                     ? new Date(practica.fechaFin).toLocaleString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                     : "Sin fecha"}
                 </div>
                 <div className="flex gap-2">
                   <p className="font-bold">Fecha Fin:</p>
                   {practica.fechaFin
                     ? new Date(practica.fechaFin).toLocaleString("es-AR", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                     : "Sin fecha"}
                 </div>
                 <div>

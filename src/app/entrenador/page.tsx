@@ -9,15 +9,7 @@ export default function EntrenadorPage() {
 
   return (
     <div className="h-screen">
-      <header className="h-1/8 flex items-center justify-between px-14 bg-[#124559] w-full">
-        <h1 className="text-2xl font-bold text-white">BahiaBlanca Club</h1>
-        <button
-          onClick={() => signOut({ callbackUrl: "/" })}
-          className="text-white hover:text-rose-600"
-        >
-          <LogoutIcon />
-        </button>
-      </header>
+
       <div className="flex h-7/8 p-8">
         <section className="flex flex-col gap-4 p-8 w-1/2">
           <div className=" h-1/2 flex items-center flex-col gap-4">

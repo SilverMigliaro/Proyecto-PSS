@@ -132,7 +132,7 @@ export default function UsuarioDetallePage() {
                 </Box>
                 <Button
                     variant="contained"
-                    onClick={() => router.push('/admin')}
+                    onClick={() => router.push('/socio')}
                     sx={{
                         mt: 2,
                         fontWeight: 'bold',
