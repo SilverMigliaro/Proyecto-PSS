@@ -8,25 +8,31 @@ import ModalModificar from "./modal/ModalModificar";
 import ModalEliminarConfirm from "./modal/ModalEliminarConfirm";
 import ModalExito from "./modal/ModalExito";
 import ModalError from "./modal/ModalError";
-import AddIcon from '@mui/icons-material/AddCircleRounded';
-import EditIcon from '@mui/icons-material/EditRounded';
-import DeleteIcon from '@mui/icons-material/DeleteForeverRounded';
+import AddIcon from "@mui/icons-material/AddCircleRounded";
+import EditIcon from "@mui/icons-material/EditRounded";
+import DeleteIcon from "@mui/icons-material/DeleteForeverRounded";
+import ModalEliminarPlanFamiliar from "./modal/ModalEliminarPlanFamiliar";
 
 interface GestionEntidadProps {
   tipo: string;
   onSuccess?: () => void;
 }
 
-export default function GestionEntidad({ tipo, onSuccess }: GestionEntidadProps) {
-  const [modal, setModal] = useState<"crear" | "modificar" | "eliminar" | null>(
-    null
-  );
+export default function GestionEntidad({
+  tipo,
+  onSuccess,
+}: GestionEntidadProps) {
+  const [modal, setModal] = useState<
+    "crear" | "modificar" | "eliminar" | "eliminarPlanFamiliar" | null
+  >(null);
   const [dniInput, setDniInput] = useState("");
   const [usuarioEncontrado, setUsuarioEncontrado] = useState<any>(null);
   const [modalExito, setModalExito] = useState<null | string>(null);
   const [modalError, setModalError] = useState(false);
 
-  const handleOpen = (accion: "crear" | "modificar" | "eliminar") => {
+  const handleOpen = (
+    accion: "crear" | "modificar" | "eliminar" | "eliminarPlanFamiliar"
+  ) => {
     setModal(accion);
     setDniInput("");
     setUsuarioEncontrado(null);
@@ -36,9 +42,12 @@ export default function GestionEntidad({ tipo, onSuccess }: GestionEntidadProps)
   const handleClose = () => setModal(null);
 
   const buscarUsuario = async () => {
-    const rol = tipo === "Administrativo" ? "ADMIN" :
-      tipo === "Socio" ? "SOCIO" :
-        "ENTRENADOR"
+    const rol =
+      tipo === "Administrativo"
+        ? "ADMIN"
+        : tipo === "Socio"
+        ? "SOCIO"
+        : "ENTRENADOR";
 
     const res = await fetch(`/api/usuario?rol=${rol}&dni=${dniInput}`);
     const data = await res.json();
@@ -71,7 +80,12 @@ export default function GestionEntidad({ tipo, onSuccess }: GestionEntidadProps)
     <Box className="p-8">
       <Typography
         variant="h6"
-        sx={{ mb: 3, textTransform: "uppercase", fontWeight: "bold", color: "#1F2937" }}
+        sx={{
+          mb: 3,
+          textTransform: "uppercase",
+          fontWeight: "bold",
+          color: "#1F2937",
+        }}
       >
         Operaciones sobre {tipo}
       </Typography>
@@ -85,8 +99,8 @@ export default function GestionEntidad({ tipo, onSuccess }: GestionEntidadProps)
               color: "lightgreen",
               backgroundColor: "#1A222E",
               "&: hover": {
-                backgroundColor: "black"
-              }
+                backgroundColor: "black",
+              },
             }}
           >
             <AddIcon /> Crear {tipo}
@@ -100,8 +114,8 @@ export default function GestionEntidad({ tipo, onSuccess }: GestionEntidadProps)
               color: "#F1FF5C",
               backgroundColor: "#1A222E",
               "&: hover": {
-                backgroundColor: "black"
-              }
+                backgroundColor: "black",
+              },
             }}
           >
             <EditIcon fontSize="small" /> Modificar {tipo}
@@ -110,16 +124,23 @@ export default function GestionEntidad({ tipo, onSuccess }: GestionEntidadProps)
         <Grid>
           <Button
             variant="contained"
-            onClick={() => handleOpen("eliminar")}
+            onClick={() => {
+              if (tipo === "Planes Familiares") {
+                handleOpen("eliminarPlanFamiliar");
+              } else {
+                handleOpen("eliminar");
+              }
+            }}
             sx={{
               color: "crimson",
               backgroundColor: "#1A222E",
               "&: hover": {
-                backgroundColor: "black"
-              }
+                backgroundColor: "black",
+              },
             }}
           >
-            <DeleteIcon fontSize="small" />Eliminar {tipo}
+            <DeleteIcon fontSize="small" />
+            Eliminar {tipo}
           </Button>
         </Grid>
       </Grid>
@@ -173,6 +194,11 @@ export default function GestionEntidad({ tipo, onSuccess }: GestionEntidadProps)
         tipo={tipo}
       />
 
+      <ModalEliminarPlanFamiliar
+        onClose={handleClose}
+        open={modal === "eliminarPlanFamiliar"}
+      />
+
       <ModalExito
         open={modalExito !== null}
         onClose={() => {
@@ -187,6 +213,6 @@ export default function GestionEntidad({ tipo, onSuccess }: GestionEntidadProps)
         onClose={() => setModalError(false)}
         tipo={tipo}
       />
-    </Box >
+    </Box>
   );
 }
